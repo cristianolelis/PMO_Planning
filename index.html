@@ -1,0 +1,1266 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador EAP — Planejamento de Projetos de Engenharia</title>
+<meta name="description" content="Gera EAP (PMBOK), Lista de Documentos e cronograma a partir de propostas técnicas e contratos. Exporta para MS Project e Excel.">
+<link rel="stylesheet" href="css/analise-eap.css">
+<link rel="stylesheet" href="css/tema.css">
+</head>
+<body>
+<header class="header">
+  <div class="header-in">
+    <div class="brand">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="#E8590C" stroke-width="2.2" aria-hidden="true"><rect x="3" y="3" width="30" height="30" rx="2"></rect><path d="M3 13h30M13 13v20M23 13v20"></path></svg>
+      <div><span class="brand-name">Gerador EAP</span><span class="brand-sub">Planejamento de projetos de engenharia</span></div>
+    </div>
+    <span class="ver">v6.0 · demonstração</span>
+  </div>
+  <nav class="tab-bar" id="tabbar" aria-label="Seções">
+    <div class="tab-bar-in">
+      <button class="tab-btn active" data-tab="analise">Análise de Documentação</button>
+      <button class="tab-btn" data-tab="dashboard">Configuração da LD</button>
+      <button class="tab-btn" data-tab="ld">Lista de Documentos</button>
+      <button class="tab-btn" data-tab="eapbase">EAP-Base</button>
+      <button class="tab-btn" data-tab="eapcrono">Cronograma</button>
+      <button class="tab-btn" data-tab="eapsug">EAP de Referência</button>
+      <button class="tab-btn" data-tab="dados">Codificação</button>
+      <button class="tab-btn" data-tab="play">Exportações</button>
+    </div>
+  </nav>
+</header>
+
+<!-- DASHBOARD -->
+<div id="tab-dashboard" class="tc">
+  <div class="page-head"><div><p class="eyebrow">Lista de Documentos</p><h1 class="page-title">Configuração da LD</h1></div><p class="page-desc">Escolha o segmento e os itens da codificação; o sistema combina os campos e gera a LD, a EAP-Base e o cronograma.</p></div>
+  <div class="sb">
+    <div class="st"><div class="n" id="sc" style="color:var(--accent)">0</div><div class="l">Combinações</div></div>
+    <div class="st"><div class="n" id="sd" style="color:var(--green)">0</div><div class="l">Documentos</div></div>
+    <div class="st"><div class="n" id="se" style="color:var(--yellow)">0</div><div class="l">Linhas EAP</div></div>
+  </div>
+  <div class="card">
+    <h2>Projeto</h2>
+    <div class="fg">
+      <div class="fgi"><label>Centro de custo</label><input type="text" id="iop" placeholder="Ex.: CC01" maxlength="10"></div>
+      <div class="fgi"><label>Ordem de serviço</label><input type="text" id="iob" placeholder="Ex.: 001" maxlength="10"></div>
+      <div class="fgi"><label>Segmento</label>
+        <select id="iseg" onchange="onSeg()">
+          <option value="">— Selecione —</option>
+          <option>METRÔ</option><option>AEROPORTUÁRIO</option><option>EDIFICAÇÕES</option><option>FERROVIÁRIO</option><option>RODOVIÁRIO</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="card" id="csel" style="display:none">
+    <h2>Selecione os Itens <span class="bdg" id="bseg"></span></h2>
+    <p style="font-size:.78rem;color:var(--text2);margin-bottom:10px;">Marque os itens que deseja usar. Dropdowns da tabela filtram automaticamente.</p>
+    <div id="sarea"></div>
+  </div>
+  <div class="card" id="ccomb" style="display:none">
+    <h2>Combinações de Documentos <span id="comb-proj-badge" class="bdg" style="background: var(--accent); margin-left: 10px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase;"></span></h2>
+    <p style="font-size:.78rem;color:var(--text2);margin-bottom:10px;">Cada linha gera documentos combinando os campos. "Tipo" é o tipo de documento e "Qtd." a quantidade de documentos (numerados em sequência).</p>
+    <div class="tw"><table class="ct" id="ctbl"><thead><tr><th>#</th><th>Fase</th><th>Área</th><th>Subárea</th><th>Local</th><th>Disciplina</th><th>Sistema</th><th>Tipo</th><th>Qtd.</th><th>Prévia do código</th><th></th></tr></thead><tbody id="cbody"></tbody></table></div>
+    <div class="ab">
+      <button class="btn btn-p" onclick="addCombos()">Gerar Combinações (Auto)</button>
+      <button class="btn btn-o" onclick="addRowManual()">Adicionar Linha (Manual)</button>
+      <button class="btn btn-s" onclick="gerar()">Gerar Documentos</button>
+      <button class="btn btn-d" onclick="limpar()">Limpar Tudo</button>
+    </div>
+  </div>
+</div>
+
+<!-- DADOS UNIFICADOS -->
+<div id="tab-dados" class="tc">
+  <div class="card">
+    <h2>Dados Unificados por Segmento</h2>
+    <div class="fgi" style="max-width:300px;margin-bottom:14px"><label>Segmento</label>
+      <select id="dseg" onchange="rDados()"><option>METRÔ</option><option>AEROPORTUÁRIO</option><option>EDIFICAÇÕES</option><option>FERROVIÁRIO</option><option>RODOVIÁRIO</option></select>
+    </div>
+    <div class="ab" style="margin:0 0 14px">
+      <button class="btn btn-o" onclick="segExportarJSON()">Exportar base (.json)</button>
+      <button class="btn btn-o" onclick="document.getElementById('segImport').click()">Importar base (.json)</button>
+      <button class="btn btn-o" onclick="segRestaurarPadrao()">Restaurar padrão</button>
+      <input type="file" id="segImport" accept=".json" style="display:none" onchange="segImportarJSON(this)">
+      <span class="ae-muted">As edições ficam salvas neste navegador. Exporte para fazer backup ou levar para outro computador.</span>
+    </div>
+    <div class="dg" id="dgrid"></div>
+  </div>
+</div>
+
+<!-- EAP-SUGESTIVA -->
+<div id="tab-eapsug" class="tc">
+  <div class="card">
+    <h2>EAP-Sugestiva (Modelo de Referência)</h2>
+    <div class="tw" id="esug" style="max-height:75vh;overflow-y:auto"></div>
+  </div>
+</div>
+
+<!-- LISTA DE DOCUMENTOS -->
+<div id="tab-ld" class="tc">
+  <div class="card">
+    <h2>Lista de Documentos (LD) <span class="bdg bdg-g" id="ldc">0</span> <span id="ld-proj-badge" class="bdg" style="background: var(--purple); margin-left: 10px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase;"></span></h2>
+    <button class="btn btn-o" onclick="xCSV('ld')" style="margin-bottom:10px">Exportar CSV</button>
+    <div class="tw" id="ldtbl" style="max-height:75vh;overflow-y:auto"><p class="empty">Nenhum documento gerado. Vá ao Dashboard e clique em "Gerar Documentos".</p></div>
+  </div>
+</div>
+
+<!-- EAP-BASE -->
+<div id="tab-eapbase" class="tc">
+  <div class="card">
+    <h2>EAP-Base <span class="bdg bdg-y" id="ebc">0</span> <span id="eb-proj-badge" class="bdg" style="background: var(--accent); margin-left: 10px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase;"></span></h2>
+    <button class="btn btn-o" onclick="xCSV('eb')" style="margin-bottom:10px">Exportar CSV</button>
+    <div class="tw" id="ebtbl" style="max-height:75vh;overflow-y:auto"><p class="empty">Nenhuma EAP gerada.</p></div>
+  </div>
+</div>
+
+<!-- EAP-CRONOGRAMA -->
+<div id="tab-eapcrono" class="tc">
+  <div class="card">
+    <h2>EAP-Cronograma <span class="bdg bdg-g" id="ecc">0</span> <span id="ec-proj-badge" class="bdg" style="background: var(--green); margin-left: 10px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase;"></span></h2>
+    <button class="btn btn-o" onclick="xCSV('ec')" style="margin-bottom:10px">Exportar CSV</button>
+    <div class="tw" id="ectbl" style="max-height:75vh;overflow-y:auto"><p class="empty">Nenhum cronograma gerado.</p></div>
+  </div>
+</div>
+
+<!-- PLAY -->
+<div id="tab-play" class="tc">
+  <div class="page-head"><div><p class="eyebrow">Saídas</p><h1 class="page-title">Exportações</h1></div></div>
+  <div class="play-card">
+    <h3>Exportações e integração com o MS Project</h3>
+    <p>Exporte a EAP-Base, o EAP-Cronograma e a Lista de Documentos em Excel direto do navegador, ou gere o arquivo <strong>.MPP</strong> nativo pelo helper local (Windows + MS Project). Para a EAP da aba <strong>Análise de Documentação</strong>, use também o formato <strong>MS Project (.xml)</strong>, que não exige helper.</p>
+    <div class="play-actions">
+      <button class="btn btn-p" onclick="exportAllXLSX()">Exportar tudo (.xlsx)</button>
+      <button class="btn btn-o" onclick="exportXLSX('eb')">EAP-Base (.xlsx)</button>
+      <button class="btn btn-o" onclick="exportXLSX('ec')">Lista de Documentos (.xlsx)</button>
+      <button class="btn btn-s" onclick="exportMPP('eb')">EAP-Base (.mpp)</button>
+      <button class="btn btn-s" onclick="exportMPP('ec')">Cronograma (.mpp)</button>
+      <button class="btn btn-o" onclick="exportMSProjectCSV('eb')">EAP-Base (CSV MS Project)</button>
+      <button class="btn btn-o" onclick="exportMSProjectCSV('ec')">Cronograma (CSV MS Project)</button>
+      <button class="btn btn-o" onclick="checkHelperStatus()">Verificar helper local</button>
+      <span id="helperStatus" class="bdg" style="background:var(--purple)">Helper: não verificado</span>
+    </div>
+    <div class="codebox" style="margin-top:16px">
+      <pre id="playHelp">EXPORTAÇÕES — XLSX direto no navegador + MPP via Helper Local
+
+XLSX:
+- O navegador gera os arquivos .xlsx diretamente usando SheetJS.
+- EAP-Base (.xlsx): estrutura com níveis, EDT e predecessoras.
+- Lista de Documentos (.xlsx): abas "Informações do Projeto" e "LD", prontas para controle.
+- Exportar tudo (.xlsx): EAP-Base e Cronograma no mesmo arquivo.
+
+MPP:
+- O navegador envia os dados para um helper local em Python/Windows.
+- O helper usa Microsoft Project + COM (pywin32) para criar o .mpp nativo.
+- Requer: Windows + MS Project instalado + helper rodando localmente.
+
+Fluxo:
+1) Gere a EAP / cronograma no HTML.
+2) Clique em “Verificar Helper Local”.
+3) Se ficar ONLINE, use os botões .MPP.
+4) Para .XLSX, não precisa do helper.
+5) Para .MPP, o helper agora valida a geração e só confirma sucesso quando o download do arquivo realmente ocorrer.
+
+Como iniciar o helper (Windows):
+- Abra a pasta "helper" e dê dois cliques em INICIAR_HELPER_MPP.bat
+  (instala o pywin32 na primeira vez e sobe o servidor local).
+- Em caso de erro, rode DIAGNOSTICO_HELPER.bat.
+
+Porta padrão do helper: http://127.0.0.1:8765</pre>
+    </div>
+    <p style="margin-top:16px;font-size:13px;color:var(--warn-fg)">O navegador não cria .mpp sozinho. O .mpp é gerado por um helper local em Python/Windows que automatiza o Microsoft Project. Já o .xlsx sai direto do próprio HTML.</p>
+  </div>
+</div>
+
+
+<!-- ANÁLISE DE DOCUMENTAÇÃO DE REFERÊNCIA → EAP (PMBOK) -->
+<div id="tab-analise" class="tc active">
+  <div class="page-head">
+    <div><p class="eyebrow">Etapa 1 · Documentação de referência</p><h1 class="page-title">Análise de documentação → EAP (PMBOK)</h1></div>
+    <p class="page-desc">Proposta técnica, contrato, termo de referência ou edital. O sistema extrai o escopo e monta uma EAP orientada a entregas, com gerenciamento, marcos, durações, predecessoras e dicionário — pronta para o MS Project.</p>
+  </div>
+  <div class="card">
+    <div class="fg" style="margin-bottom:12px">
+      <div class="fgi"><label>Nome do projeto (opcional)</label><input type="text" id="ae-nome" placeholder="Detectado automaticamente se vazio"></div>
+      <div class="fgi"><label>Data de início</label><input type="date" id="ae-inicio"></div>
+    </div>
+    <div class="ae-grid">
+      <div>
+        <div class="ae-drop" id="ae-drop" role="button" tabindex="0" aria-label="Selecionar arquivos"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#0B3D91" stroke-width="1.6" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><path d="M14 3v6h6M12 18v-6M9 15l3-3 3 3"></path></svg><div class="ae-drop-t"><b>Arraste os arquivos ou clique para selecionar</b><span>PDF com texto, DOCX, TXT ou MD · vários arquivos</span></div></div>
+        <input type="file" id="ae-file" multiple accept=".pdf,.docx,.txt,.md,.html,.htm" style="display:none">
+        <div class="ae-arqs" id="ae-arqs"></div>
+        <div class="ae-sec-title"><label class="ae-muted" for="ae-texto">Texto extraído (pode colar ou editar)</label><span class="bdg" id="ae-chars">0 caracteres</span></div>
+        <textarea id="ae-texto" placeholder="O texto dos documentos aparece aqui. Você também pode colar o conteúdo diretamente."></textarea>
+      </div>
+      <div>
+        <div class="ae-modo">
+          <h3>1. Análise automática (offline)</h3>
+          <p>Identifica seções de escopo, entregáveis, prazos, premissas, exclusões e critérios de aceitação por regras. Nada sai do seu computador.</p>
+          <button class="btn btn-p" id="ae-btn-regras">Gerar EAP automaticamente</button>
+        </div>
+        <div class="ae-modo">
+          <h3>2. Análise com IA (opcional)</h3>
+          <p>Mais precisa em documentos longos ou pouco estruturados. Usa a <b>sua</b> chave de API da Anthropic. <b>O texto dos documentos é enviado à API.</b> Verifique se a confidencialidade do contrato permite.</p>
+          <input type="password" id="ae-apikey" placeholder="Chave de API (sk-ant-...)" autocomplete="off">
+          <input type="text" id="ae-modelo" value="claude-sonnet-5-5" placeholder="Modelo">
+          <label class="ae-muted" style="display:flex;gap:6px;align-items:center;margin-bottom:8px"><input type="checkbox" id="ae-lembrar"> Lembrar a chave neste navegador</label>
+          <button class="btn btn-o" id="ae-btn-ia">Analisar com IA (Claude)</button>
+          <p style="margin-top:10px">Sem chave? Use o modo manual: copie o prompt, cole no Claude e importe o JSON da resposta.</p>
+          <div class="ae-x"><button class="btn btn-o" id="ae-btn-prompt">Copiar prompt</button><button class="btn btn-o" id="ae-btn-importar">Importar JSON</button></div>
+        </div>
+        <div class="ae-x"><button class="btn btn-o" id="ae-x-abrir">Abrir projeto salvo (.json)</button><button class="btn btn-d" id="ae-btn-limpar">Limpar</button></div>
+        <input type="file" id="ae-json-file" accept=".json" style="display:none">
+      </div>
+    </div>
+  </div>
+
+  <div id="ae-resultado" style="display:none">
+    <div class="sb" id="ae-stats"></div>
+    <div class="card">
+      <div class="ae-head-row"><h2>Exportar</h2>
+      <div class="ae-x">
+        <button class="btn btn-s" id="ae-x-xml">Exportar MS Project (.xml)</button>
+        <button class="btn btn-o" id="ae-x-mpp">MS Project (.mpp via helper)</button>
+        <button class="btn btn-o" id="ae-x-xlsx">Excel (.xlsx)</button>
+        <button class="btn btn-o" id="ae-x-csv">CSV</button>
+        <button class="btn btn-o" id="ae-x-json">Salvar projeto (.json)</button>
+      </div></div>
+      <p class="ae-nota"><b>MS Project (.xml)</b> não precisa de instalação: no MS Project use <i>Arquivo › Abrir</i>, escolha o tipo <i>Formato XML</i> e selecione o arquivo. A EAP, os marcos, as durações, as predecessoras e o dicionário (em Anotações) são importados; depois é só <i>Salvar como .mpp</i>. O botão <b>.mpp via helper</b> gera o arquivo nativo direto, mas exige o helper local rodando (aba Exportações).</p>
+    </div>
+    <div class="card">
+      <div class="ae-head-row"><h2>Estrutura Analítica do Projeto</h2><span class="bdg" id="ae-val-badge2">—</span></div>
+      <div class="ae-meta" id="ae-meta-info"></div>
+      <p class="ae-muted" style="margin-bottom:8px">Edite nomes, tipos, durações (dias úteis) e predecessoras (pelo código EDT, separados por ;). Use as setas para reorganizar e ⇤ ⇥ para mudar o nível. As datas são uma prévia em dias úteis (seg–sex); o MS Project recalcula com o calendário do projeto.</p>
+      <div class="tw" id="ae-arvore" style="max-height:70vh;overflow:auto"></div>
+    </div>
+    <details class="ae-box" open><summary>Verificação de boas práticas (PMBOK / Practice Standard for WBS) <span class="bdg" id="ae-val-badge">—</span></summary><div id="ae-val"></div></details>
+    <details class="ae-box" id="ae-dic-wrap"><summary>Dicionário da EAP</summary><div class="tw" id="ae-dic" style="max-height:60vh;overflow:auto"></div></details>
+    <details class="ae-box"><summary>Declaração de escopo extraída do documento</summary><div id="ae-escopo"></div></details>
+  </div>
+</div>
+
+<footer class="footer">Gerador EAP v6.0 · projeto de demonstração · Os dados ficam no seu navegador — nada é enviado a servidores, exceto se você usar a análise com IA.</footer>
+<div class="toast" id="toast"></div>
+
+<script src="vendor/xlsx.full.min.js"></script>
+<script>window.XLSX||document.write('<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"><\/script>')</script>
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/mammoth.browser.min.js"></script>
+<script src="data/seg-codigos.js"></script>
+<script src="data/eap-referencia.js"></script>
+<script>
+// =========================
+// EMBEDDED DATA
+// =========================
+
+// STATE
+let gLD=[],gEB=[],gEC=[];
+
+// =========================
+// TABS
+// =========================
+document.getElementById('tabbar').addEventListener('click',e=>{
+  if(!e.target.classList.contains('tab-btn'))return;
+  document.querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+e.target.dataset.tab).classList.add('active');
+  e.target.classList.add('active');
+  if(e.target.dataset.tab==='dados')rDados();
+  if(e.target.dataset.tab==='eapsug')rEapSug();
+});
+
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500)}
+
+// =========================
+// FIELD LABELS
+// =========================
+const FL={FASE:'Fase (etapa)',AREA:'Área',SUBAREA:'Subárea',LOCAL:'Local',DISC:'Disciplina',SIST:'Sistema',TIPO:'Tipo de documento'};
+const SF=['FASE','AREA','SUBAREA','LOCAL','DISC','SIST'];
+
+// =========================
+// SEGMENT CHANGE
+// =========================
+function onSeg(){
+  const s=document.getElementById('iseg').value;
+  if(!s){document.getElementById('csel').style.display='none';document.getElementById('ccomb').style.display='none';return}
+  document.getElementById('csel').style.display='block';
+  document.getElementById('ccomb').style.display='block';
+  document.getElementById('bseg').textContent=s;
+  rSel(s);clrCombo();
+  uProjBadge();
+}
+
+// =========================
+// SELECTION CHECKBOXES
+// =========================
+function rSel(s){
+  const d=SEG[s];if(!d)return;
+  let h='';
+  SF.forEach(f=>{
+    const items=d[f]||[];
+    h+=`<details class="fs" open><summary>${FL[f]||f} <span class="bdg">${items.length}</span>
+      <span class="sa" onclick="event.stopPropagation();tAll('${f}',true)">Todos</span>
+      <span class="sa" onclick="event.stopPropagation();tAll('${f}',false)">Nenhum</span>
+    </summary><div class="cg">`;
+    items.forEach((it,i)=>{
+      h+=`<label class="ci"><input type="checkbox" data-f="${f}" data-i="${i}" data-c="${it.code||''}" data-d="${(it.desc||'').replace(/"/g,'&quot;')}" onchange="onChk()"><span class="cd">${it.code||''}</span><span class="ds">${it.desc||''}</span></label>`;
+    });
+    h+='</div></details>';
+  });
+  document.getElementById('sarea').innerHTML=h;
+}
+
+function tAll(f,c){document.querySelectorAll(`input[data-f="${f}"]`).forEach(cb=>cb.checked=c);onChk()}
+
+function gChk(f){
+  const r=[];
+  document.querySelectorAll(`input[data-f="${f}"]:checked`).forEach(cb=>{r.push({code:cb.dataset.c,desc:cb.dataset.d})});
+  return r;
+}
+
+function onChk(){uDrops()}
+
+// =========================
+// COMBO TABLE
+// =========================
+let rid=0;
+function clrCombo(){document.getElementById('cbody').innerHTML='';rid=0;uStats()}
+
+function addRow(){
+  const s=document.getElementById('iseg').value;
+  if(!s){toast('Selecione um segmento!');return}
+  rid++;
+  const tr=document.createElement('tr');tr.id='r'+rid;
+  let h=`<td>${rid}</td>`;
+  SF.forEach(f=>{h+=`<td><select data-f="${f}" onchange="uPrev(this.closest('tr'))"><option value="">—</option></select></td>`});
+  h+=`<td><select data-f="TIPO" onchange="uPrev(this.closest('tr'))"><option value="">—</option></select></td>`;
+  h+=`<td><input type="number" class="cq" value="1" min="1" max="999999999" style="width:80px" onchange="uPrev(this.closest('tr'))"></td>`;
+  h+=`<td class="pv" style="font-family:monospace;font-size:.72rem;color:var(--green);max-width:280px;overflow:hidden;text-overflow:ellipsis">—</td>`;
+  h+=`<td><button class="rb" onclick="this.closest('tr').remove();uStats()">×</button></td>`;
+  tr.innerHTML=h;
+  document.getElementById('cbody').appendChild(tr);
+  uDrops();uStats();
+}
+
+function uDrops(){
+  const s=document.getElementById('iseg').value;if(!s)return;
+  document.querySelectorAll('#cbody tr').forEach(tr=>{
+    SF.forEach(f=>{
+      const sel=tr.querySelector(`select[data-f="${f}"]`);if(!sel)return;
+      const cv=sel.value;
+      const chk=gChk(f);
+      let o='<option value="">—</option>';
+      chk.forEach(it=>{const v=it.code||it.desc;o+=`<option value="${v}" data-d="${it.desc}">${it.code?it.code+' - ':''} ${it.desc}</option>`});
+      sel.innerHTML=o;
+      if (cv && chk.some(it => (it.code || it.desc) === cv)) {
+        sel.value = cv;
+      } else if (chk.length > 0) {
+        sel.value = chk[0].code || chk[0].desc;
+      } else {
+        sel.value = "";
+      }
+    });
+    const tt=tr.querySelector('select[data-f="TIPO"]');
+    if(tt){const cv=tt.value;const items=SEG[s]?.TIPO||[];let o='<option value="">—</option>';items.forEach(it=>{o+=`<option value="${it.code}" data-d="${it.desc}">${it.code} - ${it.desc}</option>`});tt.innerHTML=o;tt.value=cv}
+    uPrev(tr);
+  });
+}
+
+function uPrev(tr){
+  const op=document.getElementById('iop').value||'????';
+  const ob=document.getElementById('iob').value||'???';
+  const vs=[];
+  ['FASE','AREA','SUBAREA','LOCAL','DISC','SIST','TIPO'].forEach(f=>{const s=tr.querySelector(`select[data-f="${f}"]`);vs.push(s?s.value||'?':'?')});
+  const q=tr.querySelector('.cq')?.value||1;
+  const c=op+'-'+ob+'-'+vs.join('-')+'-0001';
+  const pv=tr.querySelector('.pv');
+  if(pv)pv.textContent=q>1?c+' ... (×'+q+')':c;
+  uStats();
+}
+
+function uStats(){
+  const rows=document.querySelectorAll('#cbody tr');
+  let td=0;rows.forEach(tr=>{td+=parseInt(tr.querySelector('.cq')?.value)||1});
+  document.getElementById('sc').textContent=rows.length;
+  document.getElementById('sd').textContent=td;
+}
+
+// =========================
+// OP/OB listeners
+// =========================
+['iop','iob'].forEach(id=>{document.getElementById(id).addEventListener('input',()=>{
+  document.querySelectorAll('#cbody tr').forEach(tr=>uPrev(tr));
+  uProjBadge();
+})});
+
+function uProjBadge(){
+  const op=document.getElementById('iop').value.trim()||'????';
+  const ob=document.getElementById('iob').value.trim()||'???';
+  const seg=document.getElementById('iseg').value||'—';
+  
+  const label = `${seg} | CC ${op} | OS ${ob}`;
+  
+  const b1 = document.getElementById('comb-proj-badge');
+  if(b1) b1.textContent = label;
+  
+  const b2 = document.getElementById('ld-proj-badge');
+  if(b2) b2.textContent = label;
+  
+  const b3 = document.getElementById('eb-proj-badge');
+  if(b3) b3.textContent = label;
+  
+  const b4 = document.getElementById('ec-proj-badge');
+  if(b4) b4.textContent = label;
+}
+
+// =========================
+// GERAR DOCUMENTOS
+// =========================
+function gerar(){
+  const op=document.getElementById('iop').value.trim();
+  const ob=document.getElementById('iob').value.trim();
+  const seg=document.getElementById('iseg').value;
+  if(!op||!ob||!seg){toast('Preencha OP, OB e Segmento!');return}
+  const rows=document.querySelectorAll('#cbody tr');
+  if(!rows.length){toast('Adicione pelo menos uma combinação!');return}
+
+  gLD=[];const tree={};let dn=0;
+
+  rows.forEach(tr=>{
+    const gv=f=>{const s=tr.querySelector(`select[data-f="${f}"]`);return{code:s?.value||'',desc:s?.selectedOptions[0]?.dataset?.d||''}};
+    const fase=gv('FASE'),area=gv('AREA'),subarea=gv('SUBAREA'),local=gv('LOCAL'),d=gv('DISC'),ss=gv('SIST'),tt=gv('TIPO');
+    const q=parseInt(tr.querySelector('.cq')?.value)||1;
+
+    for(let n=1;n<=q;n++){
+      dn++;const nn=String(n).padStart(4,'0');
+      const fc=[op,ob,fase.code,area.code,subarea.code,local.code,d.code,ss.code,tt.code,nn].join('-');
+      gLD.push({num:dn,fc,op,ob,fase:fase.code,area:area.code,subarea:subarea.code,local:local.code,d:d.code,ss:ss.code,tt:tt.code,nn,
+        fD:fase.desc,areaD:area.desc,subareaD:subarea.desc,localD:local.desc,dD:d.desc,ssD:ss.desc,ttD:tt.desc});
+    }
+
+    // Tree for EAP
+    const k1=fase.code,k2=k1+'|'+area.code,k3=k2+'|'+subarea.code,k4=k3+'|'+local.code,k5=k4+'|'+d.code,k6=k5+'|'+ss.code;
+    if(!tree[k1])tree[k1]={c:fase.code,d:fase.desc,ch:{}};
+    if(!tree[k1].ch[k2])tree[k1].ch[k2]={c:area.code,d:area.desc,ch:{}};
+    if(!tree[k1].ch[k2].ch[k3])tree[k1].ch[k2].ch[k3]={c:subarea.code,d:subarea.desc,ch:{}};
+    if(!tree[k1].ch[k2].ch[k3].ch[k4])tree[k1].ch[k2].ch[k3].ch[k4]={c:local.code,d:local.desc,ch:{}};
+    if(!tree[k1].ch[k2].ch[k3].ch[k4].ch[k5])tree[k1].ch[k2].ch[k3].ch[k4].ch[k5]={c:d.code,d:d.desc,ch:{}};
+    if(!tree[k1].ch[k2].ch[k3].ch[k4].ch[k5].ch[k6])tree[k1].ch[k2].ch[k3].ch[k4].ch[k5].ch[k6]={c:ss.code,d:ss.desc,docs:[]};
+    for(let n=1;n<=q;n++){
+      const nn=String(n).padStart(4,'0');
+      tree[k1].ch[k2].ch[k3].ch[k4].ch[k5].ch[k6].docs.push({
+        tt:tt.code,ttD:tt.desc,nn,
+        fc:[op,ob,fase.code,area.code,subarea.code,local.code,d.code,ss.code,tt.code,nn].join('-')
+      });
+    }
+  });
+
+  // Build EAP-Base & Cronograma
+  gEB=[];gEC=[];let ib=0,ic=0;
+  const pn='PROJETO '+seg+' - '+op;
+  ib++;ic++;
+  gEB.push({id:ib,n:1,e:'1',nm:pn});
+  gEC.push({id:ic,n:1,e:'1',nm:pn,du:'',pr:''});
+
+  let l2=0;
+  Object.values(tree).forEach(n1=>{l2++;ib++;ic++;
+    const e2='1.'+l2;
+    gEB.push({id:ib,n:2,e:e2,nm:'Fase '+n1.c+' - '+n1.d});
+    gEC.push({id:ic,n:2,e:e2,nm:'Fase '+n1.c+' - '+n1.d,du:'',pr:''});
+    let l3=0;
+    Object.values(n1.ch).forEach(n2=>{l3++;ib++;ic++;
+      const e3=e2+'.'+l3;
+      gEB.push({id:ib,n:3,e:e3,nm:n2.c+' - '+n2.d});
+      gEC.push({id:ic,n:3,e:e3,nm:n2.c+' - '+n2.d,du:'',pr:''});
+      let l4=0;
+      Object.values(n2.ch).forEach(n3=>{l4++;ib++;ic++;
+        const e4=e3+'.'+l4;
+        gEB.push({id:ib,n:4,e:e4,nm:n3.c+' - '+n3.d});
+        gEC.push({id:ic,n:4,e:e4,nm:n3.c+' - '+n3.d,du:'',pr:''});
+        let l5=0;
+        Object.values(n3.ch).forEach(n4=>{l5++;ib++;ic++;
+          const e5=e4+'.'+l5;
+          gEB.push({id:ib,n:5,e:e5,nm:n4.c+' - '+n4.d});
+          gEC.push({id:ic,n:5,e:e5,nm:n4.c+' - '+n4.d,du:'',pr:''});
+          let l6=0;
+          Object.values(n4.ch).forEach(n5=>{l6++;ib++;ic++;
+            const e6=e5+'.'+l6;
+            gEB.push({id:ib,n:6,e:e6,nm:n5.c+' - '+n5.d});
+            gEC.push({id:ic,n:6,e:e6,nm:n5.c+' - '+n5.d,du:'',pr:''});
+            let l7=0;
+            Object.values(n5.ch).forEach(n6=>{l7++;ib++;ic++;
+              const e7=e6+'.'+l7;
+              gEB.push({id:ib,n:7,e:e7,nm:n6.c+' - '+n6.d,pr:''});
+              gEC.push({id:ic,n:7,e:e7,nm:n6.c+' - '+n6.d,du:'',pr:''});
+              let l8=0;
+              (n6.docs||[]).forEach(doc=>{l8++;ic++;
+                const e8=e7+'.'+l8;
+                gEC.push({id:ic,n:8,e:e8,nm:doc.fc+' ('+doc.ttD+')',du:'5 dias',pr:''});
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+
+  const segSel=document.getElementById('iseg').value;
+  gerarPredecessorasEAPBase(segSel);
+  gerarPredecessorasCronograma(segSel);
+  rLD();rEB();rEC();
+  document.getElementById('sd').textContent=gLD.length;
+  document.getElementById('se').textContent=gEC.length;
+  toast('Gerado: '+gLD.length+' docs, '+gEB.length+' linhas EAP-Base, '+gEC.length+' linhas Cronograma');
+}
+
+// =========================
+// RENDER LD
+// =========================
+function rLD(){
+  const el=document.getElementById('ldtbl');
+  if(!gLD.length){el.innerHTML='<p class="empty">Nenhum documento gerado.</p>';document.getElementById('ldc').textContent='0';return}
+  let h='<table><thead><tr><th>#</th><th>Código</th><th>CC</th><th>OS</th><th>Fase</th><th>Área</th><th>Subárea</th><th>Local</th><th>Disc.</th><th>Sist.</th><th>Tipo</th><th>Nº</th><th>Descrição da fase</th><th>Disciplina</th><th>Sistema</th><th>Tipo Téc.</th></tr></thead><tbody>';
+  gLD.forEach(d=>{h+=`<tr><td>${d.num}</td><td style="font-family:monospace;color:var(--green)">${d.fc}</td><td>${d.op}</td><td>${d.ob}</td><td>${d.fase}</td><td>${d.area}</td><td>${d.subarea}</td><td>${d.local}</td><td>${d.d}</td><td>${d.ss}</td><td>${d.tt}</td><td>${d.nn}</td><td>${d.fD}</td><td>${d.dD}</td><td>${d.ssD}</td><td>${d.ttD}</td></tr>`});
+  h+='</tbody></table>';el.innerHTML=h;document.getElementById('ldc').textContent=gLD.length;
+}
+
+// =========================
+// RENDER EAP-BASE
+// =========================
+function rEB(){
+  const el=document.getElementById('ebtbl');
+  if(!gEB.length){el.innerHTML='<p class="empty">Nenhuma EAP gerada.</p>';document.getElementById('ebc').textContent='0';return}
+  let h='<table><thead><tr><th>Id</th><th>Nível</th><th>EDT</th><th>Nome da Tarefa</th></tr></thead><tbody>';
+  gEB.forEach(r=>{
+    const ind='&nbsp;&nbsp;&nbsp;&nbsp;'.repeat(r.n-1);
+    const cl=r.n<=2?'var(--accent)':r.n<=4?'var(--green)':'var(--text)';
+    const bld=r.n<=3?'font-weight:700;':'';
+    h+=`<tr><td>${r.id}</td><td>${r.n}</td><td>${r.e}</td><td style="color:${cl};${bld}">${ind}${r.nm}</td></tr>`;
+  });
+  h+='</tbody></table>';el.innerHTML=h;document.getElementById('ebc').textContent=gEB.length;
+}
+
+// =========================
+// RENDER EAP-CRONOGRAMA
+// =========================
+function rEC(){
+  const el=document.getElementById('ectbl');
+  if(!gEC.length){el.innerHTML='<p class="empty">Nenhum cronograma gerado.</p>';document.getElementById('ecc').textContent='0';return}
+  let h='<table><thead><tr><th>Id</th><th>Nível</th><th>EDT</th><th>Nome da Tarefa</th><th>Duração</th><th>Pred.</th></tr></thead><tbody>';
+  gEC.forEach(r=>{
+    const ind='&nbsp;&nbsp;&nbsp;&nbsp;'.repeat(r.n-1);
+    const cl=r.n<=2?'var(--accent)':r.n<=4?'var(--green)':r.n===8?'var(--yellow)':'var(--text)';
+    const bld=r.n<=3?'font-weight:700;':'';
+    const fs=r.n===8?'font-size:.72rem;':'';
+    h+=`<tr><td>${r.id}</td><td>${r.n}</td><td>${r.e}</td><td style="color:${cl};${bld}${fs}">${ind}${r.nm}</td><td>${r.du}</td><td>${r.pr}</td></tr>`;
+  });
+  h+='</tbody></table>';el.innerHTML=h;document.getElementById('ecc').textContent=gEC.length;
+}
+
+// =========================
+// LIMPAR
+// =========================
+function limpar(){
+  if(!confirm('Deseja limpar todas as combinações e documentos gerados?'))return;
+  clrCombo();gLD=[];gEB=[];gEC=[];rLD();rEB();rEC();
+  document.getElementById('sd').textContent='0';document.getElementById('se').textContent='0';
+  toast('Tudo limpo!');
+}
+
+// =========================
+// DADOS UNIFICADOS
+// =========================
+function rDados(){
+  const s=document.getElementById('dseg').value;const d=SEG[s];if(!d)return;
+  const g=document.getElementById('dgrid');let h='';
+  ['FASE','AREA','SUBAREA','LOCAL','DISC','SIST','TIPO'].forEach(f=>{
+    const items=d[f]||[];
+    h+=`<div><h3>${FL[f]||f} <span class="bdg">${items.length}</span></h3><div class="tw mt"><table><thead><tr><th>Código</th><th>Descrição</th></tr></thead><tbody>`;
+    items.forEach(it=>{h+=`<tr><td style="color:var(--accent);font-weight:700">${it.code||''}</td><td>${it.desc||''}</td></tr>`});
+    h+='</tbody></table></div></div>';
+  });
+  g.innerHTML=h;
+}
+
+// =========================
+// EAP-SUGESTIVA
+// =========================
+function rEapSug(){
+  let h='<table><thead><tr><th>Id</th><th>Nível</th><th>EDT</th><th>Nome da Tarefa</th><th>Duração</th><th>Pred.</th></tr></thead><tbody>';
+  EAP.forEach(r=>{
+    const nv=parseInt(r.nivel)||1;
+    const ind='&nbsp;&nbsp;&nbsp;&nbsp;'.repeat(Math.max(0,nv-1));
+    const cl=nv<=2?'var(--accent)':nv<=4?'var(--green)':'var(--text)';
+    const bld=nv<=3?'font-weight:700;':'';
+    h+=`<tr><td>${r.id||''}</td><td>${r.nivel||''}</td><td>${r.edt||''}</td><td style="color:${cl};${bld}">${ind}${r.nome||''}</td><td>${r.duracao||''}</td><td>${r.predecessoras||''}</td></tr>`;
+  });
+  h+='</tbody></table>';
+  document.getElementById('esug').innerHTML=h;
+}
+
+// =========================
+// EXPORT CSV
+// =========================
+function xCSV(t){
+  let rows=[],fn='';
+  if(t==='ld'){
+    if(!gLD.length){toast('Nenhum documento para exportar!');return}
+    rows.push(['#','Código','Centro de custo','Ordem de serviço','Fase','Área','Subárea','Local','Disciplina','Sistema','Tipo','Nº','Descrição da fase','Descrição da disciplina','Descrição do sistema','Descrição do tipo']);
+    gLD.forEach(d=>rows.push([d.num,d.fc,d.op,d.ob,d.fase,d.area,d.subarea,d.local,d.d,d.ss,d.tt,d.nn,d.fD,d.dD,d.ssD,d.ttD]));
+    fn='Lista_Documentos.csv';
+  }else if(t==='eb'){
+    if(!gEB.length){toast('Nenhuma EAP para exportar!');return}
+    rows.push(['Id','Nível','EDT','Nome da Tarefa','Predecessoras']);
+    gEB.forEach(r=>rows.push([r.id,r.n,r.e,r.nm,r.pr||'']));
+    fn='EAP_Base.csv';
+  }else if(t==='ec'){
+    if(!gEC.length){toast('Nenhum cronograma para exportar!');return}
+    rows.push(['Id','Nível','EDT','Nome da Tarefa','Duração','Predecessoras']);
+    gEC.forEach(r=>rows.push([r.id,r.n,r.e,r.nm,r.du,r.pr]));
+    fn='EAP_Cronograma.csv';
+  }
+  const bom='\uFEFF';
+  const csv=bom+rows.map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(';')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=fn;a.click();
+  URL.revokeObjectURL(url);
+  toast(''+fn+' exportado!');
+}
+
+// =========================
+// v4.0 — Persistência Dados_Unificados (LocalStorage) + CRUD
+// =========================
+const LS_KEY = 'GEAP_SEG_DEMO_V2';
+function loadSEG(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return;
+    const obj = JSON.parse(raw);
+    if(obj && typeof obj === 'object'){
+      Object.keys(obj).forEach(seg => {
+        if(!SEG[seg]) SEG[seg] = {};
+        Object.keys(obj[seg]||{}).forEach(f => {
+          SEG[seg][f] = obj[seg][f];
+        });
+      });
+    }
+  }catch(e){ console.warn('Falha ao carregar SEG', e); }
+}
+function saveSEG(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(SEG)); }
+  catch(e){ console.warn('Falha ao salvar SEG', e); }
+}
+
+function duAdd(seg, field){
+  const code = prompt('Código do item ('+field+'):' );
+  if(code===null) return;
+  const desc = prompt('Descrição do item ('+field+'):' );
+  if(desc===null) return;
+  if(!SEG[seg]) SEG[seg] = {};
+  if(!SEG[seg][field]) SEG[seg][field] = [];
+  SEG[seg][field].push({code: String(code).trim(), desc: String(desc||'').trim()});
+  saveSEG();
+  rDados();
+  const cur = document.getElementById('iseg')?.value;
+  if(cur === seg){ rSel(seg); uDrops(); }
+  toast('Item adicionado');
+}
+function duEdit(seg, field, idx){
+  const it = SEG[seg][field][idx];
+  it.__editing = true;
+  rDados();
+}
+function duCancel(seg, field, idx){
+  const it = SEG[seg][field][idx];
+  delete it.__editing;
+  rDados();
+}
+function duSave(seg, field, idx){
+  const code = document.getElementById(`du_code_${field}_${idx}`).value.trim();
+  const desc = document.getElementById(`du_desc_${field}_${idx}`).value.trim();
+  SEG[seg][field][idx] = {code, desc};
+  saveSEG();
+  rDados();
+  const cur = document.getElementById('iseg')?.value;
+  if(cur === seg){ rSel(seg); uDrops(); }
+  toast('Item atualizado');
+}
+function duDelete(seg, field, idx){
+  if(!confirm('Excluir este item?')) return;
+  SEG[seg][field].splice(idx, 1);
+  saveSEG();
+  rDados();
+  const cur = document.getElementById('iseg')?.value;
+  if(cur === seg){ rSel(seg); uDrops(); }
+  toast('Item removido');
+}
+
+// sobrescreve rDados para exibir botões por item e botão por campo
+const _rDados_v2 = rDados;
+rDados = function(){
+  const seg = document.getElementById('dseg').value;
+  const d = SEG[seg];
+  if(!d) return;
+  const g = document.getElementById('dgrid');
+  let h = '';
+  ['FASE','AREA','SUBAREA','LOCAL','DISC','SIST','TIPO'].forEach(field => {
+    const items = d[field] || [];
+    h += `<div><h3>${(FL[field]||field)} <span class="bdg">${items.length}</span> `+
+         `<button class="du-btn primary" onclick="duAdd('${seg}','${field}')">Adicionar</button>`+
+         `</h3>`;
+    h += `<div class="tw mt"><table><thead><tr><th>Código</th><th>Descrição</th><th>Ações</th></tr></thead><tbody>`;
+    items.forEach((it, idx) => {
+      const editing = !!it.__editing;
+      if(!editing){
+        h += `<tr>`+
+             `<td style="color:var(--accent);font-weight:700">${it.code||''}</td>`+
+             `<td>${it.desc||''}</td>`+
+             `<td><div class="du-actions">`+
+             `<button class="du-btn" onclick="duEdit('${seg}','${field}',${idx})">Editar</button>`+
+             `<button class="du-btn danger" onclick="duDelete('${seg}','${field}',${idx})"></button>`+
+             `</div></td>`+
+             `</tr>`;
+      } else {
+        h += `<tr>`+
+             `<td><input class="du-input" id="du_code_${field}_${idx}" value="${String(it.code||'').replace(/"/g,'&quot;')}"></td>`+
+             `<td><input class="du-input" id="du_desc_${field}_${idx}" value="${String(it.desc||'').replace(/"/g,'&quot;')}"></td>`+
+             `<td><div class="du-actions">`+
+             `<button class="du-btn" onclick="duSave('${seg}','${field}',${idx})">Salvar</button>`+
+             `<button class="du-btn" onclick="duCancel('${seg}','${field}',${idx})">Cancelar</button>`+
+             `</div></td>`+
+             `</tr>`;
+      }
+    });
+    h += `</tbody></table></div></div>`;
+  });
+  g.innerHTML = h;
+}
+
+// =========================
+// v4.0 — Dashboard: Combinações automáticas (produto cartesiano) — versão estável
+// =========================
+
+function buildComboRowHtml(id){
+  let h=`<td>${id}</td>`;
+  SF.forEach(f=>{h+=`<td><select data-f="${f}" onchange="uPrev(this.closest('tr'))"><option value="">—</option></select></td>`});
+  h+=`<td><select data-f="TIPO" onchange="uPrev(this.closest('tr'))"><option value="">—</option></select></td>`;
+  h+=`<td><input type="number" class="cq" value="1" min="1" max="999999999" style="width:80px" onchange="uPrev(this.closest('tr'))"></td>`;
+  h+=`<td class="pv" style="font-family:monospace;font-size:.72rem;color:var(--green);max-width:280px;overflow:hidden;text-overflow:ellipsis">—</td>`;
+  h+=`<td><button class="rb" onclick="this.closest('tr').remove();uStats()">×</button></td>`;
+  return h;
+}
+
+function appendComboBatch(combos, keys, batchSize=250){
+  const tbody = document.getElementById('cbody');
+  let index = 0;
+  const total = combos.length;
+  const start = performance.now();
+
+  function fillRow(tr, combo){
+    keys.forEach(f => {
+      const sel = tr.querySelector('select[data-f="'+f+'"]');
+      if(sel) sel.value = combo[f] ?? '';
+    });
+    uPrev(tr);
+  }
+
+  function process(){
+    const frag = document.createDocumentFragment();
+    const rows = [];
+    const end = Math.min(index + batchSize, total);
+    for(; index < end; index++){
+      rid++;
+      const tr = document.createElement('tr');
+      tr.id = 'r' + rid;
+      tr.innerHTML = buildComboRowHtml(rid);
+      frag.appendChild(tr);
+      rows.push({tr, combo: combos[index]});
+    }
+    tbody.appendChild(frag);
+    uDrops();
+    rows.forEach(item => fillRow(item.tr, item.combo));
+    uStats();
+
+    if(index < total){
+      if(index % 1000 === 0){
+        toast('Processando combinações: ' + index + ' / ' + total);
+      }
+      requestAnimationFrame(process);
+    } else {
+      const secs = ((performance.now() - start)/1000).toFixed(1);
+      toast('Combinações criadas: ' + total + ' em ' + secs + ' s');
+    }
+  }
+
+  requestAnimationFrame(process);
+}
+
+const COMBO_ALERTA = 5000;
+function addRowManual(){ return addRow(); }
+
+function addCombos(){
+  const seg = document.getElementById('iseg').value;
+  if(!seg){ toast('Selecione um segmento!'); return; }
+
+  const picks = {};
+  SF.forEach(f => {
+    const arr = gChk(f);
+    picks[f] = (arr && arr.length) ? arr.map(it => (it.code ?? '')) : [''];
+  });
+
+  const total = SF.reduce((acc,f) => acc * (picks[f].length || 1), 1);
+  if(total === 0){ toast('Nada selecionado para combinar.'); return; }
+
+  const keys = SF.slice();
+  const combos = [];
+
+  function build(idx, current){
+    if(idx >= keys.length){
+      combos.push({...current});
+      return;
+    }
+    const k = keys[idx];
+    for(const v of picks[k]){
+      current[k] = v;
+      build(idx + 1, current);
+    }
+  }
+
+  if(total > COMBO_ALERTA){
+    const msg = 'Serão criadas ' + total.toLocaleString('pt-BR') + ' combinações (' +
+      SF.map(f => (FL[f] || f) + ': ' + picks[f].length).join(' × ') + ').\n\n' +
+      'Volumes muito grandes podem deixar o navegador lento ou travá-lo. Deseja continuar?';
+    if(!confirm(msg)) { toast('Operação cancelada. Reduza os itens marcados.'); return; }
+  }
+  toast('Preparando ' + total.toLocaleString('pt-BR') + ' combinações...');
+  build(0, {});
+  appendComboBatch(combos, keys, 250);
+}
+
+// =========================
+// v4.0 — Predecessoras seguindo EAP-Sugestiva por segmento
+// Estratégia:
+// 1) Se existir template para o segmento (EAP_SUG_BY_SEG[seg]), tenta mapear por NOME (normalizado).
+// 2) Converte predecessoras do template (IDs do template) -> IDs reais do gEB/gEC via nome.
+// 3) Se não achar match, aplica fallback sequencial por pai.
+// =========================
+function normName(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'').replace(/[^a-z0-9]+/g,' ').trim();
+}
+
+function getEapTemplateForSeg(seg){
+  // No HTML atual, EAP (array) é a sugestiva embutida (normalmente Aeroportuário).
+  // Se no futuro houver múltiplas, usar objeto EAP_SUG_BY_SEG.
+  if(typeof EAP_SUG_BY_SEG === 'object' && EAP_SUG_BY_SEG[seg]) return EAP_SUG_BY_SEG[seg];
+  // fallback: se houver EAP global e segmento for AEROPORTUÁRIO
+  if(typeof EAP !== 'undefined' && Array.isArray(EAP)) return EAP;
+  return null;
+}
+
+function applyTemplatePreds(seg, targetArr, targetNivel, parentKeyFn){
+  const tpl = getEapTemplateForSeg(seg);
+  if(!tpl) return false;
+
+  // map template id -> template name
+  const tplById = new Map();
+  tpl.forEach(t => tplById.set(String(t.id), t));
+
+  // map normalized name -> target task
+  const tgtByName = new Map();
+  targetArr.forEach(t => {
+    if(t && t.n === targetNivel){
+      tgtByName.set(normName(t.nm), t);
+    }
+  });
+
+  let applied = 0;
+  // for each target, find template by name
+  targetArr.forEach(t => {
+    if(!t || t.n !== targetNivel) return;
+    const key = normName(t.nm);
+    // find matching template task (any level) by name
+    const tplTask = tpl.find(x => normName(x.nome) === key);
+    if(!tplTask) return;
+
+    const predStr = String(tplTask.predecessoras||'').trim();
+    if(!predStr) return;
+
+    // template predecessors are IDs (can be separated by ; or ,)
+    const parts = predStr.split(/[;,]/).map(p=>p.trim()).filter(Boolean);
+    const mapped = [];
+    parts.forEach(pid => {
+      const pt = tplById.get(String(pid));
+      if(!pt) return;
+      const pName = normName(pt.nome);
+      const tgtPred = tgtByName.get(pName);
+      if(tgtPred) mapped.push(String(tgtPred.id));
+    });
+
+    if(mapped.length){
+      t.pr = mapped.join(';');
+      applied++;
+    }
+  });
+
+  return applied > 0;
+}
+
+function fallbackPredByParent(targetArr, targetNivel){
+  const lastByParent = {};
+  targetArr.forEach(t => {
+    if(!t || t.n !== targetNivel) return;
+    const idx = (t.e||'').lastIndexOf('.');
+    const parent = idx>0 ? (t.e||'').substring(0, idx) : 'ROOT';
+    t.pr = lastByParent[parent] ? String(lastByParent[parent]) : '';
+    lastByParent[parent] = t.id;
+  });
+}
+
+function gerarPredecessorasEAPBase(seg){
+  // nível 7
+  // tenta template; se não aplicar nada, fallback
+  const ok = applyTemplatePreds(seg, gEB, 7);
+  if(!ok) fallbackPredByParent(gEB, 7);
+}
+
+function gerarPredecessorasCronograma(seg){
+  // nível 8
+  const ok = applyTemplatePreds(seg, gEC, 8);
+  if(!ok) fallbackPredByParent(gEC, 8);
+}
+
+// =========================
+// v4.0 — Export MS Project (CSV)
+// =========================
+function exportMSProjectCSV(tipo){
+  if(tipo==='ec' && (!gEC || !gEC.length)){ toast('Nenhum cronograma para exportar!'); return; }
+  if(tipo==='eb' && (!gEB || !gEB.length)){ toast('Nenhuma EAP-Base para exportar!'); return; }
+  const rows = [];
+  rows.push(['ID','Name','WBS','Duration','Predecessors','Outline Level','Text2']);
+  if(tipo==='ec'){
+    gEC.forEach(r => {
+      const dur = (r.du||'').replace(' dias','d').replace(' dia','d');
+      rows.push([r.id, r.nm, r.e, dur, r.pr||'', r.n, (r.text2||'')]);
+    });
+  } else {
+    gEB.forEach(r => rows.push([r.id, r.nm, r.e, '', r.pr||'', r.n, (r.text2||'')]));
+  }
+  const bom='\uFEFF';
+  const csv = bom + rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g,'""')}"`).join(';')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (tipo==='ec' ? 'cronograma_ms_project.csv' : 'eap_base_ms_project.csv');
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('MS Project CSV exportado!');
+}
+
+// =========================
+// v4.0 — XLSX export (mantém implementação mínima)
+// =========================
+// (reutiliza funções já injetadas nas versões anteriores se existirem)
+
+// =========================
+// v4.0 — PLAY utilitário
+// =========================
+function copyOneCmd(){
+  const el=document.getElementById('cmdOne');
+  const txt=el?el.textContent:'';
+  navigator.clipboard.writeText(txt).then(()=>toast('Comando copiado!'));
+}
+
+
+
+// =========================
+// v6.0 — Linha 1: XLSX no Browser + MPP via Helper Local (Windows + MS Project)
+// =========================
+const HELPER_BASE_URL = 'http://127.0.0.1:8765';
+
+function getProjectMeta(){
+  return {
+    op: (document.getElementById('iop')?.value || '').trim() || '????',
+    ob: (document.getElementById('iob')?.value || '').trim() || '???',
+    segmento: (document.getElementById('iseg')?.value || '').trim() || 'SEM-SEGMENTO'
+  };
+}
+function getProjectLabelFromMeta(meta){
+  return `${meta.segmento} | OP ${meta.op} | OB ${meta.ob}`;
+}
+function ensureDataFor(tipo){
+  if(tipo === 'eb' && (!gEB || !gEB.length)){
+    toast('Nenhuma EAP-Base gerada.');
+    return false;
+  }
+  if(tipo === 'ec' && (!gEC || !gEC.length)){
+    toast('Nenhum EAP-Cronograma gerado.');
+    return false;
+  }
+  return true;
+}
+function getRowsForXLSX(tipo){
+
+  if(tipo === 'ec'){
+
+    if(!gLD || !gLD.length){
+      toast('Nenhum LD gerado!');
+      return [];
+    }
+
+    const seg = document.getElementById('iseg').value;
+
+    return gLD.map(doc => {
+
+      const row = {};
+
+      row["Código"] = doc.fc;
+      row["Centro de custo"] = doc.op;
+      row["Ordem de serviço"] = doc.ob;
+
+      row["Fase"] = doc.fase;
+      row["Área"] = doc.area;
+      row["Subárea"] = doc.subarea;
+      row["Local"] = doc.local;
+      row["Disciplina"] = doc.d;
+      row["Sistema"] = doc.ss;
+      row["Tipo"] = doc.tt;
+
+      if (typeof applyAutoFields === "function") applyAutoFields(row, doc, seg);
+
+      return row;
+    });
+  }
+
+  if(tipo === 'eb'){
+    return (gEB || []).map(r => ({
+      ID: r.id,
+      Nivel: r.n,
+      EDT: r.e,
+      Nome_da_Tarefa: r.nm,
+      Predecessoras: r.pr || ''
+    }));
+  }
+
+  return [];
+}
+function autoFitWs(ws, rows){
+  const headers = rows.length ? Object.keys(rows[0]) : [];
+  const widths = headers.map(h => ({wch: Math.max(h.length + 2, 12)}));
+  rows.forEach(row => {
+    headers.forEach((h, idx) => {
+      const len = String(row[h] ?? '').length + 2;
+      widths[idx].wch = Math.min(Math.max(widths[idx].wch, len), 60);
+    });
+  });
+  ws['!cols'] = widths;
+}
+
+// =========================
+// v6.0 — Exportação da Lista de Documentos (.xlsx) com modelo próprio
+// =========================
+function ldBeautifySegment(seg) {
+  const map = {'AEROPORTUÁRIO':'Aeroportuário','METRÔ':'Metroviário','EDIFICAÇÕES':'Edificações','FERROVIÁRIO':'Ferroviário','RODOVIÁRIO':'Rodoviário'};
+  return map[String(seg || '').toUpperCase()] || String(seg || '');
+}
+function ldGenerateTituloCompleto(doc) {
+  return [doc.ttD, doc.dD, doc.ssD, doc.subareaD, doc.localD].filter(Boolean).join(' – ');
+}
+function exportLDTemplateOfficialFromPlay() {
+  if(!window.XLSX) { toast('Biblioteca XLSX não carregada.'); return; }
+  if(!gLD || !gLD.length) { toast('Nenhuma Lista de Documentos gerada.'); return; }
+  const meta = getProjectMeta();
+  const segmentoFmt = ldBeautifySegment(meta.segmento);
+  const hoje = new Date();
+  const wb = XLSX.utils.book_new();
+
+  const info = [
+    ['LISTA DE DOCUMENTOS — INFORMAÇÕES DO PROJETO'], [],
+    ['Centro de custo', meta.op], ['Ordem de serviço', meta.ob], ['Segmento', segmentoFmt],
+    ['Quantidade de documentos', gLD.length], ['Data de emissão', hoje.toLocaleDateString('pt-BR')], ['Revisão', '0'], [],
+    ['Gerado pelo Gerador EAP (projeto de demonstração).']
+  ];
+  const wsInf = XLSX.utils.aoa_to_sheet(info);
+  wsInf['!cols'] = [{wch: 30}, {wch: 50}];
+  wsInf['!merges'] = [{s: {r: 0, c: 0}, e: {r: 0, c: 1}}];
+  XLSX.utils.book_append_sheet(wb, wsInf, 'Informações do Projeto');
+
+  const cab = ['Item', 'Código', 'CC', 'OS', 'Fase', 'Área', 'Subárea', 'Local', 'Disciplina', 'Sistema', 'Tipo', 'Nº',
+               'Descrição da fase', 'Descrição da subárea', 'Descrição do local', 'Descrição da disciplina', 'Descrição do sistema', 'Descrição do tipo',
+               'Título do documento', 'Revisão', 'Situação', 'Data prevista', 'Responsável'];
+  const linhas = [
+    ['LISTA DE DOCUMENTOS — ' + segmentoFmt.toUpperCase()],
+    ['Centro de custo ' + meta.op + ' · Ordem de serviço ' + meta.ob + ' · Emissão ' + hoje.toLocaleDateString('pt-BR')],
+    [],
+    cab
+  ];
+  gLD.forEach((d, i) => linhas.push([
+    i + 1, d.fc, d.op, d.ob, d.fase, d.area, d.subarea, d.local, d.d, d.ss, d.tt, d.nn,
+    d.fD, d.subareaD, d.localD, d.dD, d.ssD, d.ttD, ldGenerateTituloCompleto(d), '0', 'A emitir', '', ''
+  ]));
+  const ws = XLSX.utils.aoa_to_sheet(linhas);
+  ws['!cols'] = [6, 34, 8, 8, 6, 6, 8, 8, 10, 8, 6, 7, 22, 26, 20, 24, 26, 24, 60, 8, 12, 14, 18].map(w => ({wch: w}));
+  ws['!merges'] = [{s: {r: 0, c: 0}, e: {r: 0, c: cab.length - 1}}, {s: {r: 1, c: 0}, e: {r: 1, c: cab.length - 1}}];
+  ws['!autofilter'] = {ref: XLSX.utils.encode_range({s: {r: 3, c: 0}, e: {r: 3 + gLD.length, c: cab.length - 1}})};
+  XLSX.utils.book_append_sheet(wb, ws, 'LD');
+
+  const fileName = `Lista_de_Documentos_${segmentoFmt}_${meta.op}_${meta.ob}.xlsx`.replace(/[\/:*?"<>| ]+/g, '_');
+  XLSX.writeFile(wb, fileName);
+  toast('Lista de Documentos exportada: ' + fileName);
+}
+function exportXLSX(tipo){
+  if(tipo === 'ec'){
+    exportLDTemplateOfficialFromPlay();
+    return;
+  }
+  if(!window.XLSX){
+    toast('Biblioteca XLSX não carregada.');
+    return;
+  }
+  if(!ensureDataFor(tipo)) return;
+  const meta = getProjectMeta();
+  const wb = XLSX.utils.book_new();
+  const rows = getRowsForXLSX(tipo);
+  const ws = XLSX.utils.json_to_sheet(rows);
+  autoFitWs(ws, rows);
+  const sheetName = tipo === 'eb' ? 'EAP-Base' : 'EAP-Cronograma';
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  const filename = `${sheetName}_${meta.segmento}_${meta.op}_${meta.ob}`.replace(/[\/:*?"<>| ]+/g,'_') + '.xlsx';
+  XLSX.writeFileXLSX(wb, filename);
+  toast('XLSX exportado: ' + filename);
+}
+function exportAllXLSX(){
+  if(!window.XLSX){
+    toast('Biblioteca XLSX não carregada.');
+    return;
+  }
+  if((!gEB || !gEB.length) && (!gEC || !gEC.length)){
+    toast('Gere a EAP-Base e/ou o EAP-Cronograma primeiro.');
+    return;
+  }
+  const meta = getProjectMeta();
+  const wb = XLSX.utils.book_new();
+  if(gEB && gEB.length){
+    const rowsEb = getRowsForXLSX('eb');
+    const wsEb = XLSX.utils.json_to_sheet(rowsEb);
+    autoFitWs(wsEb, rowsEb);
+    XLSX.utils.book_append_sheet(wb, wsEb, 'EAP-Base');
+  }
+  if(gEC && gEC.length){
+    const rowsEc = getRowsForXLSX('ec');
+    const wsEc = XLSX.utils.json_to_sheet(rowsEc);
+    autoFitWs(wsEc, rowsEc);
+    XLSX.utils.book_append_sheet(wb, wsEc, 'EAP-Cronograma');
+  }
+  const filename = `Pacote_EAP_Cronograma_${meta.segmento}_${meta.op}_${meta.ob}.xlsx`.replace(/[\\/:*?"<>| ]+/g,'_');
+  XLSX.writeFileXLSX(wb, filename);
+  toast('Workbook completo exportado: ' + filename);
+}
+function buildMppPayload(tipo){
+  const meta = getProjectMeta();
+  const records = (tipo === 'eb' ? (gEB || []) : (gEC || [])).map(r => ({
+    id: Number(r.id || 0),
+    nivel: Number(r.n || 1),
+    edt: String(r.e || ''),
+    nome: String(r.nm || ''),
+    duracao: String(r.du || ''),
+    predecessoras: String(r.pr || ''),
+    text1: tipo === 'eb' ? String(r.e || '') : '',
+    text2: tipo === 'ec' ? String(r.nm || '') : ''
+  }));
+  return {
+    tipo,
+    project_name: `${tipo === 'eb' ? 'EAP-BASE' : 'EAP-CRONOGRAMA'} - ${getProjectLabelFromMeta(meta)}`,
+    meta,
+    records
+  };
+}
+
+async function checkHelperStatus(){
+  const badge = document.getElementById('helperStatus');
+  try{
+    badge.textContent = 'Helper: verificando...';
+    badge.style.background = 'var(--yellow)';
+    const res = await fetch(`${HELPER_BASE_URL}/health`, {method:'GET'});
+    const data = await res.json();
+    if(!res.ok || !data.ok) throw new Error(data.error || 'Falha no helper');
+    if(!data.has_com){
+      badge.textContent = 'Helper: ONLINE sem COM/MS Project';
+      badge.style.background = 'var(--yellow)';
+      toast('Helper respondeu, mas o Microsoft Project/pywin32 não está disponível para gerar .MPP nativo.');
+      return false;
+    }
+    badge.textContent = `Helper: ONLINE | ${data.message}`;
+    badge.style.background = 'var(--green)';
+    toast('Helper local online e apto para gerar .MPP.');
+    return true;
+  }catch(err){
+    badge.textContent = 'Helper: OFFLINE';
+    badge.style.background = 'var(--red)';
+    toast('Helper local offline ou indisponível: ' + err.message);
+    return false;
+  }
+}
+
+
+async function exportMPP(tipo){
+  if(!ensureDataFor(tipo)) return;
+  const badge = document.getElementById('helperStatus');
+  try{
+    const ok = await checkHelperStatus();
+    if(!ok) throw new Error('Helper não está apto para gerar .MPP');
+    badge.textContent = 'Helper: processando...';
+    badge.style.background = 'var(--yellow)';
+    const payload = buildMppPayload(tipo);
+    const res = await fetch(`${HELPER_BASE_URL}/export/mpp`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if(!res.ok || !data.ok){
+      throw new Error(data.error || 'Falha ao exportar MPP');
+    }
+    if(!data.download_url || !data.file_name){
+      throw new Error('O helper não retornou o arquivo .MPP para download');
+    }
+
+    const fileRes = await fetch(data.download_url, {method:'GET'});
+    if(!fileRes.ok){
+      throw new Error('O helper informou sucesso, mas o arquivo .MPP não pôde ser baixado');
+    }
+    const blob = await fileRes.blob();
+    if(!blob || blob.size === 0){
+      throw new Error('O arquivo .MPP retornado pelo helper está vazio');
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = data.file_name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    badge.textContent = 'Helper: ONLINE';
+    badge.style.background = 'var(--green)';
+    toast(`MPP baixado com sucesso: ${data.file_name}`);
+  }catch(err){
+    console.error(err);
+    badge.textContent = 'Helper: ERRO';
+    badge.style.background = 'var(--red)';
+    toast('Erro ao exportar MPP: ' + err.message);
+  }
+}
+
+
+// Init
+loadSEG();
+rDados();rEapSug();uProjBadge();
+</script>
+<script src="js/melhorias-v6.js"></script>
+<script src="js/analise-eap.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# Saídas do helper
+helper/exports/
+__pycache__/
+*.pyc
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Arquivos de trabalho (não versionar documentos de clientes)
+*.mpp
+*.xlsx
+*.xlsm
+!exemplos/*.xlsx
+privado/

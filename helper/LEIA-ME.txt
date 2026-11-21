@@ -1,0 +1,15 @@
+HELPER LOCAL MPP — Gerador EAP v6.0
+
+Gera arquivos .mpp nativos automatizando o Microsoft Project (Windows).
+
+Requisitos: Windows, Microsoft Project instalado, Python 3 (com "Add Python to PATH").
+
+Uso:
+1. Dê dois cliques em INICIAR_HELPER_MPP.bat (na 1ª vez instala o pywin32).
+2. Deixe a janela aberta. O helper fica em http://127.0.0.1:8765
+3. No app, aba Exportações > "Verificar helper local" e depois os botões .MPP
+   (ou, na aba Análise de Documentação, "MS Project (.mpp via helper)").
+4. Problemas? Rode DIAGNOSTICO_HELPER.bat e veja http://127.0.0.1:8765/diag
+
+Dica: para a EAP da aba Análise de Documentação, o botão "MS Project (.xml)"
+não precisa do helper — o MS Project abre o XML diretamente.
