@@ -6,6 +6,8 @@ Também gera **Lista de Documentos (LD)** codificada, **EAP-Base** e **cronogram
 
 > **Projeto de demonstração.** A base de códigos e a EAP de referência são fictícias. Substitua-os pelos padrões da sua organização na aba *Codificação*.
 
+> **Versão corporativa com equipe de agentes de IA.** Na empresa, esta solução operava como um fluxo multiagente no Microsoft Copilot, com modelos Claude Opus, coordenado por um agente orquestrador. Agentes especializados analisavam o escopo, estruturavam a EAP segundo o PMBOK, preparavam o arquivo com código de estrutura de tópicos e EDT para mapeamento direto no MS Project, gravavam em pasta padronizada com nomenclatura customizada e enviavam o resultado por e-mail via Outlook. Este repositório reúne o núcleo da solução, com dados fictícios.
+
 Tudo roda no navegador: os dados ficam no seu computador. Nada é enviado a servidores, exceto se você optar pela análise com IA.
 
 ---
